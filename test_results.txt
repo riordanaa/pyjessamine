@@ -1,0 +1,19 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\aidan\Desktop\Jessamine.jl-main\python
+configfile: pyproject.toml
+plugins: anyio-4.11.0
+collecting ... collected 9 items
+
+tests/test_regressor.py::TestJessamineRegressor::test_fit_returns_self PASSED [ 11%]
+tests/test_regressor.py::TestJessamineRegressor::test_predict_shape PASSED [ 22%]
+tests/test_regressor.py::TestJessamineRegressor::test_predict_finite PASSED [ 33%]
+tests/test_regressor.py::TestJessamineRegressor::test_model_string PASSED [ 44%]
+tests/test_regressor.py::TestJessamineRegressor::test_complexity PASSED  [ 55%]
+tests/test_regressor.py::TestJessamineRegressor::test_sympy_parse PASSED [ 66%]
+tests/test_regressor.py::TestJessamineRegressor::test_sklearn_clone PASSED [ 77%]
+tests/test_regressor.py::TestJessamineRegressor::test_feature_names PASSED [ 88%]
+tests/test_regressor.py::TestJessamineRegressor::test_n_features PASSED  [100%]
+
+======================== 9 passed in 128.98s (0:02:08) ========================

@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-03-11T20:27:54.950526+00:00",
+  "dataset": "polynomial",
+  "ground_truth": "y = x1**2 + 2*x2",
+  "n_samples": 200,
+  "noise": 0.0,
+  "data_seed": 42,
+  "n_train": 160,
+  "n_test": 40,
+  "n_features": 2,
+  "feature_names": [
+    "x1",
+    "x2"
+  ],
+  "model_equation": "0.006356165030068494 - 0.00013483001940509505*x1 + 1.9958107340347284*x2 + 0.9926622257806019*(x1**2)",
+  "model_complexity": 15,
+  "sympy_valid": true,
+  "r2_train": 0.999979909430335,
+  "r2_test": 0.9999701267493436,
+  "runtime_seconds": 138.746,
+  "hp_max_time": 120,
+  "hp_output_size": 6,
+  "hp_scratch_size": 6,
+  "hp_parameter_size": 2,
+  "hp_num_time_steps": 3,
+  "hp_max_epochs": 3,
+  "hp_op_inventory": "polynomial",
+  "hp_random_seed": 42,
+  "hp_num_to_keep": 20,
+  "hp_num_to_generate": 40,
+  "hp_verbosity": 0
+}

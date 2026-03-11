@@ -5,9 +5,13 @@ Scikit-learn compatible wrapper for Jessamine.jl symbolic regression.
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+from sympy import preorder_traversal
+from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication_application, convert_xor
 
 from . import julia_bridge
 from .sympy_utils import symbolics_to_sympy, remap_variables
+
+_SYMPY_TRANSFORMATIONS = standard_transformations + (implicit_multiplication_application, convert_xor)
 
 
 class JessamineRegressor(BaseEstimator, RegressorMixin):
@@ -194,7 +198,12 @@ def model(est, X=None):
 
 def complexity(est):
     """
-    Get the complexity of the fitted model.
+    Get the complexity of the fitted model as the number of nodes in the
+    SymPy expression parse tree (SRBench standard).
+
+    This follows the SRBench 2.0 definition: complexity is the total number
+    of nodes in the SymPy expression tree, counting all operators, variables,
+    and constants. For example, ``x1 + 2`` has 3 nodes: Add, x1, 2.
 
     Parameters
     ----------
@@ -204,7 +213,19 @@ def complexity(est):
     Returns
     -------
     int
-        Total complexity (operands + instructions) of the genome.
+        Number of nodes in the SymPy parse tree.
     """
     check_is_fitted(est, "is_fitted_")
-    return julia_bridge.complexity(est._fit_result)
+    try:
+        from sympy import symbols as sympy_symbols
+        expr_str = model(est)
+        # Build a local_dict so feature names like x1, x2 are treated as
+        # atomic symbols rather than implicit multiplication (x*1, x*2).
+        feature_names = getattr(est, "feature_names_", [])
+        local_dict = {name: sympy_symbols(name) for name in feature_names}
+        expr = parse_expr(expr_str, local_dict=local_dict,
+                          transformations=_SYMPY_TRANSFORMATIONS)
+        return sum(1 for _ in preorder_traversal(expr))
+    except Exception:
+        # Fallback to Julia-side genome complexity if SymPy parsing fails
+        return julia_bridge.complexity(est._fit_result)

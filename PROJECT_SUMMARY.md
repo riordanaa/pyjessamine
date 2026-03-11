@@ -94,7 +94,7 @@ This module provides the public API:
 
 - **`model(est)`** -- Returns the symbolic expression as a SymPy-compatible string. If the estimator was trained with named features (via a pandas DataFrame), the variable names in the expression are remapped to match.
 
-- **`complexity(est)`** -- Returns the integer complexity of the fitted model.
+- **`complexity(est)`** -- Returns the SRBench-standard complexity of the fitted model: the number of nodes in the SymPy expression parse tree, computed via `preorder_traversal`. Feature names are passed as a `local_dict` so that identifiers like `x1`, `x2` are treated as atomic symbols rather than implicit multiplication (`x*1`, `x*2`). Falls back to Julia-side genome complexity if SymPy parsing fails.
 
 ---
 
@@ -117,6 +117,20 @@ SRBench requires that every symbolic regression method produce a model expressio
 | **Scientific notation preservation** | `1e-3` | Temporarily protect `e` in scientific notation before inserting multiplication operators, then restore |
 | **Julia function names** | `abs(`, `mod(` | Map to SymPy equivalents: `Abs(`, `Mod(` |
 | **Indexed variables** | `x[1]` | Convert to `x1` |
+
+### Complexity Metric: SRBench Node-Count Standard
+
+`complexity(est)` follows the SRBench 2.0 definition: the total number of nodes in the SymPy expression parse tree, obtained via `sympy.preorder_traversal`. Every operator, variable, and constant is one node. Verified against three canonical cases:
+
+| Expression | Expected | Got | Notes |
+|---|---|---|---|
+| `x1 + 1` | 3 | 3 | Add, x1, 1 |
+| `sin(x1 * 2)` | 4 | 4 | sin, Mul, x1, 2 |
+| `x1**2 + x2 - 5` | 6 | 6 | SymPy folds `-5` into a single `Integer(-5)` atom; no separate Sub node |
+
+The third case illustrates an important subtlety: SymPy represents `a - 5` as `Add(a, Integer(-5))`, so the negative constant is one node, not two. This is the canonical SRBench-compliant count.
+
+A `local_dict` mapping feature names to SymPy symbols is passed to `parse_expr` to prevent `x1` from being treated as `x * 1` under `implicit_multiplication_application`.
 
 ### Defense in Depth
 

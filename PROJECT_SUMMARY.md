@@ -240,3 +240,45 @@ Full outputs: [`python/results/test_run.json`](python/results/test_run.json) | [
 - **SymPy valid**: true
 - **Runtime**: 134.25 seconds
 - **Discovered equation**: `0.0066 + 1.994*x2 + 0.992*(x1**2)`
+
+---
+
+## 7. SRBench Contribution Compliance
+
+All requirements from the [SRBench Contribution Guide](https://github.com/cavalab/srbench/blob/master/CONTRIBUTING.md) have been verified and met.
+
+### Estimator Requirements
+
+| Requirement | Status | Implementation |
+|---|---|---|
+| Open-source Python implementation | DONE | MIT-licensed, hosted at [github.com/riordanaa/pyjessamine](https://github.com/riordanaa/pyjessamine) |
+| Scikit-learn compatible API | DONE | Inherits `BaseEstimator` + `RegressorMixin`; implements `fit()`, `predict()`, `score()`, `get_params()`, `set_params()` |
+| `random_state` attribute | DONE | Renamed from `random_seed` to `random_state` per SRBench convention |
+| `max_time` parameter | DONE | Controls Julia evolutionary search time limit in seconds |
+| SIGALRM handling | DONE | Catches `signal.SIGALRM` in `fit()` on Unix to respect SRBench time enforcement |
+
+### Submission Files
+
+| File | Requirement | Status |
+|---|---|---|
+| `srbench/metadata.yml` | Authors, description, URL | DONE |
+| `srbench/install.sh` | Pull from stable repo, not local source | DONE -- clones from GitHub, installs via pip, precompiles Julia |
+| `srbench/regressor.py` | Exports `est`, `model()`, `complexity()`, `hyper_params`, `eval_kwargs` | DONE |
+
+### Model Output Requirements
+
+| Requirement | Status | Implementation |
+|---|---|---|
+| `model(est, X)` returns sympy-compatible string | DONE | `sympy_utils.py` converts Symbolics.jl output (Unicode subscripts, `^`, implicit multiplication) |
+| Variable names match `X.columns` | DONE | DataFrame columns captured before `check_X_y` validation; `model()` remaps `x1, x2, ...` to column names |
+| Operators available in SymPy | DONE | Julia `abs` mapped to `Abs`, `mod` to `Mod`, etc. |
+| `complexity(est)` returns node count | DONE | Uses `sympy.preorder_traversal` (SRBench 2.0 standard); `local_dict` prevents `x1` misparse |
+
+### Install Script Requirements
+
+| Requirement | Status | Implementation |
+|---|---|---|
+| No sudo required | DONE | All installs use pip into the conda environment |
+| No source code included | DONE | `install.sh` clones from GitHub at runtime |
+| Uses `$CONDA_PREFIX` | DONE | Install target respects conda environment |
+| Precompilation | DONE | Julia packages precompiled during install to avoid first-run latency |

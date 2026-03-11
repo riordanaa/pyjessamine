@@ -1,0 +1,12 @@
+authors:
+  - W. Garrett Mitchener
+  - Aidan Riordan
+  - Latherial Calbert
+  - Aiden Camilleri
+email: wgm@unca.edu
+name: Jessamine
+description: |
+  Evolutionary symbolic regression using SSA-form linear genetic programming
+  with ridge regression and Variable Neighborhood Search.
+  Julia: https://github.com/wgm-applied-math/Jessamine.jl
+url: https://github.com/wgm-applied-math/Jessamine.jl

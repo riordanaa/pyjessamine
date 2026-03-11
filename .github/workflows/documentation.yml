@@ -1,0 +1,48 @@
+# -*- yaml -*-
+name: Documentation
+
+# on:
+#   push:
+#     branches:
+#       - main # update to match your development branch (master, main, dev, trunk, ...)
+#     tags: '*'
+#   pull_request:
+
+on:
+  # Allow me to run it manually
+  workflow_dispatch:
+
+  # Run when a release is published
+  release:
+    types: [published]
+
+jobs:
+  build:
+    permissions:
+      contents: write
+      pull-requests: read
+      statuses: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      - name: Pip
+        run: pip install -r requirements.txt
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+      - name: Julia cache
+        uses: julia-actions/cache@v2
+      - name: Install dependencies
+        run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: Build and deploy documentation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If authenticating with GitHub Actions token
+          # DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # If authenticating with SSH deploy key
+        run: julia --project=docs/ docs/make.jl

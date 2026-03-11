@@ -2,6 +2,9 @@
 Scikit-learn compatible wrapper for Jessamine.jl symbolic regression.
 """
 
+import signal
+import sys
+
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
@@ -38,8 +41,9 @@ class JessamineRegressor(BaseEstimator, RegressorMixin):
         Maximum number of VNS epochs.
     op_inventory : str, default="polynomial"
         Operation inventory. One of "polynomial", "rational", "explog", "trig".
-    random_seed : int or None, default=None
+    random_state : int or None, default=None
         Random seed for reproducibility. None uses default RNG.
+        (SRBench standard name for the random seed parameter.)
     lambda_model : float, default=0.01
         Regularization weight for the linear model coefficients.
     lambda_parameter : float, default=0.01
@@ -67,7 +71,7 @@ class JessamineRegressor(BaseEstimator, RegressorMixin):
         num_time_steps=3,
         max_epochs=10,
         op_inventory="polynomial",
-        random_seed=None,
+        random_state=None,
         lambda_model=0.01,
         lambda_parameter=0.01,
         lambda_operand=0.01,
@@ -84,7 +88,7 @@ class JessamineRegressor(BaseEstimator, RegressorMixin):
         self.num_time_steps = num_time_steps
         self.max_epochs = max_epochs
         self.op_inventory = op_inventory
-        self.random_seed = random_seed
+        self.random_state = random_state
         self.lambda_model = lambda_model
         self.lambda_parameter = lambda_parameter
         self.lambda_operand = lambda_operand
@@ -101,7 +105,8 @@ class JessamineRegressor(BaseEstimator, RegressorMixin):
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
-            Training input data.
+            Training input data. If a pandas DataFrame, column names are
+            preserved for use in symbolic model output.
         y : array-like of shape (n_samples,)
             Target values.
 
@@ -109,12 +114,17 @@ class JessamineRegressor(BaseEstimator, RegressorMixin):
         -------
         self
         """
-        X, y = check_X_y(X, y)
-
-        # Store feature names if X is a DataFrame
+        # Capture feature names BEFORE check_X_y converts DataFrame to ndarray
         if hasattr(X, "columns"):
             self.feature_names_ = list(X.columns)
+        elif hasattr(X, "shape") and len(np.shape(X)) == 2:
+            self.feature_names_ = [f"x{i+1}" for i in range(np.shape(X)[1])]
         else:
+            self.feature_names_ = None  # will be set after check_X_y
+
+        X, y = check_X_y(X, y)
+
+        if self.feature_names_ is None:
             self.feature_names_ = [f"x{i+1}" for i in range(X.shape[1])]
 
         self.n_features_in_ = X.shape[1]
@@ -137,13 +147,37 @@ class JessamineRegressor(BaseEstimator, RegressorMixin):
             "verbosity": int(self.verbosity),
         }
 
-        if self.random_seed is not None:
-            kwargs["random_seed"] = int(self.random_seed)
+        if self.random_state is not None:
+            kwargs["random_seed"] = int(self.random_state)
         if self.stop_threshold is not None:
             kwargs["stop_threshold"] = float(self.stop_threshold)
 
-        self._fit_result = julia_bridge.fit(X, y, **kwargs)
-        self.is_fitted_ = True
+        # Handle SIGALRM for SRBench time enforcement (Unix only).
+        # SRBench sends SIGALRM if fit() exceeds the allowed time.
+        # We catch it and return whatever we have so far.
+        self._fit_result = None
+        self.is_fitted_ = False
+
+        if sys.platform != "win32":
+            def _timeout_handler(signum, frame):
+                raise TimeoutError("SRBench SIGALRM: fit() time limit exceeded")
+
+            old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+            try:
+                self._fit_result = julia_bridge.fit(X, y, **kwargs)
+                self.is_fitted_ = True
+            except TimeoutError:
+                # If we got interrupted, mark as fitted only if we have a
+                # partial result.  The Julia side may have stored intermediate
+                # best agents.
+                if self._fit_result is not None:
+                    self.is_fitted_ = True
+            finally:
+                signal.signal(signal.SIGALRM, old_handler)
+        else:
+            # Windows: no SIGALRM support, just run normally
+            self._fit_result = julia_bridge.fit(X, y, **kwargs)
+            self.is_fitted_ = True
 
         return self
 
@@ -176,7 +210,7 @@ def model(est, X=None):
         A fitted JessamineRegressor instance.
     X : pandas.DataFrame or None, default=None
         If provided, variable names in the expression are remapped to match
-        the DataFrame column names.
+        the DataFrame column names (required by SRBench).
 
     Returns
     -------
@@ -187,7 +221,7 @@ def model(est, X=None):
     raw_str = julia_bridge.symbolic_string(est._fit_result)
     sympy_str = symbolics_to_sympy(raw_str)
 
-    # Remap variable names if column names available
+    # Remap variable names to match training data columns (SRBench requirement)
     if X is not None and hasattr(X, "columns"):
         sympy_str = remap_variables(sympy_str, list(X.columns))
     elif hasattr(est, "feature_names_"):

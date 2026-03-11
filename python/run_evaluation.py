@@ -85,7 +85,7 @@ def run_experiment(args):
         num_time_steps=args.num_time_steps,
         max_epochs=args.max_epochs,
         op_inventory=args.op_inventory,
-        random_seed=args.seed,
+        random_state=args.seed,
         num_to_keep=args.num_to_keep,
         num_to_generate=args.num_to_generate,
         verbosity=args.verbosity,

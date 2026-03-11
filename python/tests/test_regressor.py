@@ -17,7 +17,7 @@ QUICK_PARAMS = dict(
     num_to_keep=5,
     num_to_generate=10,
     max_time=120,
-    random_seed=42,
+    random_state=42,
     verbosity=0,
 )
 

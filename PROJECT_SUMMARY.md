@@ -185,3 +185,44 @@ Each run appends one row. Column headers are written only on the first run. This
 - **Hyperparameters**: all Jessamine hyperparameters, prefixed with `hp_` for easy filtering
 
 This structure is designed to be directly compatible with SRBench's results analysis pipeline and supports parameter sweeps on SLURM or PBS-based clusters.
+
+---
+
+## 6. Test Results
+
+All tests have been run and pass. The raw outputs are committed to the repository for verification.
+
+### Python Unit Tests (9/9 Passed)
+
+Full output: [`test_results.txt`](test_results.txt)
+
+| Test | Status |
+|------|--------|
+| `test_fit_returns_self` | PASSED |
+| `test_predict_shape` | PASSED |
+| `test_predict_finite` | PASSED |
+| `test_model_string` | PASSED |
+| `test_complexity` | PASSED |
+| `test_sympy_parse` | PASSED |
+| `test_sklearn_clone` | PASSED |
+| `test_feature_names` | PASSED |
+| `test_n_features` | PASSED |
+
+### Julia Interface Test
+
+Full output: [`julia_test_results.txt`](julia_test_results.txt)
+
+- **Rating**: 0.0799 (lower is better)
+- **Predictions**: 100 samples generated successfully
+- **Discovered formula**: `0.005 + 1.990*x2 + 0.995*(x1^2)` (ground truth: `x1^2 + 2*x2`)
+- **Complexity**: 10
+
+### Evaluation Pipeline Run
+
+Full outputs: [`python/results/test_run.json`](python/results/test_run.json) | [`python/results/test_run.csv`](python/results/test_run.csv)
+
+- **R2 (train)**: 0.999975
+- **R2 (test)**: 0.999965
+- **SymPy valid**: true
+- **Runtime**: 134.25 seconds
+- **Discovered equation**: `0.0066 + 1.994*x2 + 0.992*(x1**2)`

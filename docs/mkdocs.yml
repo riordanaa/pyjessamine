@@ -25,3 +25,4 @@ docs_dir: 'build'
 
 pages:
   - Home: index.md
+  - Python Wrapper: python.md

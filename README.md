@@ -1,8 +1,154 @@
-# Jessamine.jl
+# pyjessamine — Python Wrapper for Jessamine.jl
 
-Julia package for evolutionary symbolic regression using static-single-assignment form expressions.
+A **scikit-learn compatible** Python wrapper for [Jessamine.jl](https://github.com/wgm-applied-math/Jessamine.jl), a symbolic regression engine written in Julia. Jessamine evolves mathematical expressions using linear genetic programming in SSA form, combined with ridge regression and Variable Neighborhood Search (VNS).
 
-**pyjessamine** is the scikit-learn compatible Python wrapper, built for [SRBench](https://github.com/cavalab/srbench) compliance. See the full project documentation below.
+Built for [SRBench](https://github.com/cavalab/srbench) compliance. All computation runs in Julia for full performance — the Python layer is a zero-overhead bridge.
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- **Julia 1.11+** ([julialang.org](https://julialang.org/downloads/))
+- **Python 3.10+** with pip
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/riordanaa/pyjessamine.git
+cd pyjessamine
+
+# Install the Python package (editable mode)
+cd python
+pip install -e .
+```
+
+Julia dependencies are installed automatically on first use via `juliacall`.
+
+### Basic Usage
+
+```python
+import numpy as np
+from pyjessamine import JessamineRegressor, model, complexity
+
+# Generate example data: y = x1^2 + 2*x2
+X = np.random.randn(200, 2)
+y = X[:, 0]**2 + 2 * X[:, 1]
+
+# Fit the symbolic regressor
+est = JessamineRegressor(max_time=120)
+est.fit(X, y)
+
+# Get predictions
+y_pred = est.predict(X)
+
+# Get the discovered symbolic expression (SymPy-compatible)
+print(model(est))       # e.g., "0.005 + 1.99*x2 + 0.995*(x1**2)"
+
+# Get model complexity (SymPy node count)
+print(complexity(est))  # e.g., 14
+```
+
+### With pandas DataFrames
+
+```python
+import pandas as pd
+
+df = pd.DataFrame({"temperature": X[:, 0], "pressure": X[:, 1]})
+est.fit(df, y)
+print(model(est))  # Uses column names: "0.005 + 1.99*pressure + 0.995*(temperature**2)"
+```
+
+---
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `max_time` | int | 300 | Maximum search time in seconds |
+| `output_size` | int | 6 | Number of output slots in the genome |
+| `scratch_size` | int | 6 | Number of scratch (intermediate) slots |
+| `parameter_size` | int | 2 | Learnable scalar parameters per genome |
+| `num_time_steps` | int | 3 | Genome evaluation iterations (expression depth) |
+| `max_epochs` | int | 10 | Maximum VNS epochs |
+| `op_inventory` | str | "polynomial" | Operation set (see below) |
+| `random_state` | int/None | None | Random seed for reproducibility |
+| `lambda_model` | float | 0.01 | Regularization for linear model coefficients |
+| `lambda_parameter` | float | 0.01 | Regularization for genome parameters |
+| `lambda_operand` | float | 0.01 | Complexity penalty weight |
+| `stop_threshold` | float | 0.001 | Early stop if rating falls below this |
+| `num_to_keep` | int | 20 | Elite agents kept per generation |
+| `num_to_generate` | int | 40 | New agents per generation |
+| `simplifier` | bool | True | Run simplification epoch after evolution |
+| `verbosity` | int | 0 | 0=silent, 1=info, 2=debug |
+
+### Operation Inventories
+
+| Inventory | Operations | Use Case |
+|-----------|-----------|----------|
+| `"polynomial"` | +, -, *, constant multiply | Polynomial expressions |
+| `"rational"` | +, -, *, /, constant multiply | Rational functions |
+| `"explog"` | +, -, *, exp, log, constant multiply | Exponential/logarithmic |
+| `"trig"` | +, -, *, sin, cos, constant multiply | Trigonometric expressions |
+
+---
+
+## SRBench Usage
+
+The `srbench/` directory contains all files needed for [SRBench](https://github.com/cavalab/srbench) submission:
+
+```
+srbench/
+  metadata.yml    # Authors, description, URL
+  install.sh      # Installation script (clones from GitHub)
+  regressor.py    # Exports est, model(), complexity(), eval_kwargs
+```
+
+To test locally:
+```bash
+cd srbench
+bash install.sh
+python -c "from regressor import est, model, complexity; print('OK')"
+```
+
+---
+
+## Evaluation Pipeline
+
+Run reproducible experiments with the built-in evaluation script:
+
+```bash
+# Default (polynomial: y = x1^2 + 2*x2)
+python python/run_evaluation.py
+
+# Kepler's third law
+python python/run_evaluation.py --dataset kepler --max-time 300
+
+# Nguyen-7 with transcendental functions
+python python/run_evaluation.py --dataset nguyen7 --op-inventory explog --seed 7
+```
+
+Results are saved to `python/results/` as both JSON (full fidelity) and CSV (append-friendly for aggregation).
+
+---
+
+## Running Tests
+
+```bash
+# Python unit tests (9 tests)
+cd python && python -m pytest tests/test_regressor.py -v
+
+# Julia interface test
+julia --project=. test_python_interface.jl
+```
+
+---
+
+# Project Documentation
+
+*The sections below document the implementation details, bug fixes, and architecture for developers and reviewers.*
 
 ---
 
